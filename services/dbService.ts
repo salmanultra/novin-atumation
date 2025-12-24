@@ -24,14 +24,18 @@ class DBService {
       } else {
         console.error('Storage Error:', e);
       }
-      throw e; // Re-throw to stop execution in caller
+      // We do not throw here to prevent app crash, just log it
     }
   }
 
   // --- Settings ---
   getSettings(): SystemSettings {
-    const settings = localStorage.getItem('db_settings');
-    return settings ? JSON.parse(settings) : INITIAL_SETTINGS;
+    try {
+        const settings = localStorage.getItem('db_settings');
+        return settings ? JSON.parse(settings) : INITIAL_SETTINGS;
+    } catch {
+        return INITIAL_SETTINGS;
+    }
   }
 
   saveSettings(settings: SystemSettings): void {
@@ -40,8 +44,12 @@ class DBService {
 
   // --- Users ---
   private getUsers(): User[] {
-    const users = localStorage.getItem('db_users');
-    return users ? JSON.parse(users) : INITIAL_USERS;
+    try {
+        const users = localStorage.getItem('db_users');
+        return users ? JSON.parse(users) : INITIAL_USERS;
+    } catch {
+        return INITIAL_USERS;
+    }
   }
 
   private saveUsers(users: User[]) {
@@ -49,8 +57,12 @@ class DBService {
   }
 
   private getLetters(): Letter[] {
-    const letters = localStorage.getItem('db_letters');
-    return letters ? JSON.parse(letters) : [];
+    try {
+        const letters = localStorage.getItem('db_letters');
+        return letters ? JSON.parse(letters) : [];
+    } catch {
+        return [];
+    }
   }
 
   private saveLetters(letters: Letter[]) {
@@ -58,8 +70,12 @@ class DBService {
   }
 
   private getLogs(): Log[] {
-    const logs = localStorage.getItem('db_logs');
-    return logs ? JSON.parse(logs) : [];
+    try {
+        const logs = localStorage.getItem('db_logs');
+        return logs ? JSON.parse(logs) : [];
+    } catch {
+        return [];
+    }
   }
 
   private saveLogs(logs: Log[]) {
@@ -209,14 +225,22 @@ class DBService {
   }
 
   init() {
-    if (!localStorage.getItem('db_users')) {
-      this.saveUsers(INITIAL_USERS);
-    }
-    if (!localStorage.getItem('db_settings')) {
-        this.saveSettings(INITIAL_SETTINGS);
+    try {
+        if (!localStorage.getItem('db_users')) {
+          this.saveUsers(INITIAL_USERS);
+        }
+        if (!localStorage.getItem('db_settings')) {
+            this.saveSettings(INITIAL_SETTINGS);
+        }
+    } catch (e) {
+        console.warn('Initialization failed (possibly due to disabled cookies/storage)', e);
     }
   }
 }
 
 export const dbService = new DBService();
-dbService.init();
+try {
+    dbService.init();
+} catch(e) {
+    console.error("Critical DB Init Error", e);
+}
