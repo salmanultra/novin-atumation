@@ -1,28 +1,7 @@
-import { GoogleGenAI } from "@google/genai";
-
-const getClient = () => {
-    let apiKey = '';
-    // Safely access process.env to avoid ReferenceError in some environments
-    try {
-        // @ts-ignore
-        if (typeof process !== 'undefined' && process.env) {
-            // @ts-ignore
-            apiKey = process.env.API_KEY || '';
-        }
-    } catch (e) {
-        console.warn("Could not access process.env");
-    }
-
-    if (!apiKey) {
-        console.warn("API Key not found. AI features will be disabled.");
-        return null;
-    }
-    return new GoogleGenAI({ apiKey });
-};
 
 export const draftLetterWithAI = async (topic: string, senderName: string, receiverName: string): Promise<string> => {
-  const client = getClient();
-  if (!client) return "خطا: کلید API تنظیم نشده است. لطفاً تنظیمات سیستم را بررسی کنید.";
+  // Pollinations AI does not require an API Key.
+  // It functions via a simple HTTP GET/POST request.
 
   const prompt = `
     You are an expert secretary in a formal Iranian office.
@@ -35,17 +14,23 @@ export const draftLetterWithAI = async (topic: string, senderName: string, recei
     
     The tone should be very polite, formal, and strictly professional using standard administrative terminology (e.g., 'احتراماً', 'به استحضار می‌رساند', 'مزید امتنان').
     Do not include placeholders like [Date] or [Signature], just the body and closing.
-    Return ONLY the text of the letter.
+    Return ONLY the text of the letter. Do not add any English introduction.
   `;
 
   try {
-    const response = await client.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-    });
-    return response.text || "خطا در تولید متن.";
+    // Using 'openai' model via Pollinations for better reasoning capabilities in Persian
+    const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=openai`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+        throw new Error('Network response was not ok');
+    }
+
+    const text = await response.text();
+    return text || "خطا در تولید متن.";
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return "خطا در ارتباط با هوش مصنوعی. لطفاً اتصال اینترنت خود را بررسی کنید.";
+    console.error("Pollinations AI Error:", error);
+    return "خطا در ارتباط با هوش مصنوعی. لطفاً اتصال اینترنت خود را بررسی کنید (ممکن است نیاز به تغییر IP باشد).";
   }
 };
